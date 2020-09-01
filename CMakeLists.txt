@@ -10,3 +10,8 @@ add_executable(builder-example
         include/molecule_builder.h
         include/molecule_reader.h
         src/builder-example.c)
+
+add_executable(blockchain-builder
+        include/molecule_reader.h
+        include/molecule_builder.h
+        src/blockchain-builder.c)
