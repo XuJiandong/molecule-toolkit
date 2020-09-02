@@ -1,6 +1,6 @@
-#include <stdio.h>
-#include <stdint.h>
 #include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
 
 #include "blockchain-api.c"
 #define ____ 0x00
@@ -40,7 +40,7 @@ mol_seg_t build_RawHeader() {
   return res.seg;
 }
 
-#define FROM_INT(i) ((const uint8_t*)(&i))
+#define FROM_INT(i) ((const uint8_t *)(&i))
 
 mol_seg_t build_Bytes() {
   mol_builder_t b;
@@ -67,7 +67,6 @@ mol_seg_t build_BytesVec() {
   assert(MolReader_BytesVec_verify(&res.seg, false) == 0);
   return res.seg;
 }
-
 
 mol_seg_t build_Byte32Vec() {
   mol_builder_t b;
@@ -106,7 +105,6 @@ mol_seg_t build_OutPoint() {
   mol_builder_t b;
   mol_seg_res_t res;
   MolBuilder_OutPoint_init(&b);
-
 
   byte tx_hash[32] = {0};
   MolBuilder_OutPoint_set_tx_hash(&b, tx_hash);
@@ -195,7 +193,6 @@ mol_seg_t build_ProposalShortId() {
   return res.seg;
 }
 
-
 mol_seg_t build_ProposalShortIdVec() {
   mol_builder_t b;
   mol_seg_res_t res;
@@ -209,7 +206,6 @@ mol_seg_t build_ProposalShortIdVec() {
   assert(MolReader_ProposalShortIdVec_verify(&res.seg, false) == 0);
   return res.seg;
 }
-
 
 mol_seg_t build_UncleBlockVec() {
   mol_builder_t b;
@@ -243,7 +239,6 @@ mol_seg_t build_TransactionVec() {
   assert(res.errno == 0);
   assert(MolReader_TransactionVec_verify(&res.seg, false) == 0);
   return res.seg;
-
 }
 
 mol_seg_t build_CellDepVec() {
@@ -316,15 +311,18 @@ mol_seg_t build_RawTransaction() {
   uint32_t version = 0x12;
   MolBuilder_RawTransaction_set_version(&b, FROM_INT(version), 4);
   mol_seg_t cell_dep_vec = build_CellDepVec();
-  MolBuilder_RawTransaction_set_cell_deps(&b, cell_dep_vec.ptr, cell_dep_vec.size);
+  MolBuilder_RawTransaction_set_cell_deps(&b, cell_dep_vec.ptr,
+                                          cell_dep_vec.size);
   mol_seg_t header_dep = build_Byte32Vec();
-  MolBuilder_RawTransaction_set_header_deps(&b, header_dep.ptr, header_dep.size);
+  MolBuilder_RawTransaction_set_header_deps(&b, header_dep.ptr,
+                                            header_dep.size);
   mol_seg_t cell_input = build_CellInputVec();
   MolBuilder_RawTransaction_set_inputs(&b, cell_input.ptr, cell_input.size);
   mol_seg_t cell_output = build_CellOutputVec();
   MolBuilder_RawTransaction_set_outputs(&b, cell_output.ptr, cell_output.size);
   mol_seg_t output_data = build_BytesVec();
-  MolBuilder_RawTransaction_set_outputs_data(&b, output_data.ptr, output_data.size);
+  MolBuilder_RawTransaction_set_outputs_data(&b, output_data.ptr,
+                                             output_data.size);
 
   res = MolBuilder_RawTransaction_build(b);
   assert(res.errno == 0);
@@ -358,7 +356,8 @@ mol_seg_t build_Block() {
   mol_seg_t uncles = build_UncleBlockVec();
   MolBuilder_Block_set_uncles(&b, uncles.ptr, uncles.size);
   mol_seg_t transaction_vec = build_TransactionVec();
-  MolBuilder_Block_set_transactions(&b, transaction_vec.ptr, transaction_vec.size);
+  MolBuilder_Block_set_transactions(&b, transaction_vec.ptr,
+                                    transaction_vec.size);
   mol_seg_t proposals = build_ProposalShortIdVec();
   MolBuilder_Block_set_proposals(&b, proposals.ptr, proposals.size);
 
@@ -386,8 +385,7 @@ void read_Block(mol_seg_t data) {
   assert(code_hash.ptr[0] == 0x12 && code_hash.ptr[1] == 0x34);
 }
 
-
-int main(int argc, const char* argv[]) {
+int main(int argc, const char *argv[]) {
   mol_seg_t block = build_Block();
   read_Block(block);
 
