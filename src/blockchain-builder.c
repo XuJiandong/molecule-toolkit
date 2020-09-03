@@ -396,10 +396,33 @@ void read_Block(mol_seg_t data) {
 
 //
 // predefined type
-//
+// If types defined in schema, are the same as below (case insensitive)
+// they will be converted to the corresponding types automatically instead of just
+// returning raw byte array.
+typedef struct Byte32 {
+  uint8_t *data;  // 32 bytes
+} Byte32;
+
 typedef struct Uint128 {
   uint8_t *data;  // 16 bytes
 } Uint128;
+typedef uint64_t Uint64;
+typedef int64_t Int64;
+typedef uint32_t Uint32;
+typedef int32_t Int32;
+typedef uint16_t Uint16;
+typedef int16_t Int16;
+typedef uint8_t Uint8;
+typedef int8_t Int8;
+
+// converting function
+// format: convert_to_${Type}
+Byte32 convert_to_Byte32(mol_seg_t *seg) {
+  Byte32 ret;
+  ret.data = seg->ptr;
+      ASSERT(seg->size == 32);
+  return ret;
+}
 
 Uint128 convert_to_uint128(mol_seg_t *seg) {
   Uint128 ret;
@@ -408,16 +431,15 @@ Uint128 convert_to_uint128(mol_seg_t *seg) {
   return ret;
 }
 
-typedef struct Byte32 {
-  uint8_t *data;  // 32 bytes
-} Byte32;
-
-Byte32 convert_to_byte32(mol_seg_t *seg) {
-  Byte32 ret;
-  ret.data = seg->ptr;
-  ASSERT(seg->size == 32);
-  return ret;
+Uint32 convert_to_Uint32(mol_seg_t *seg) {
+  return (Uint32)mol_unpack_number(seg->ptr);
 }
+
+Int32 convert_to_Int32(mol_seg_t *seg) {
+  return (Int32)mol_unpack_number(seg->ptr);
+}
+
+// TODO: missing converting function
 
 //
 // auto generated content
@@ -442,13 +464,13 @@ struct HeaderVTable *GetHeaderVTable(void);
 struct RawHeaderVTable *GetRawHeaderVTable(void);
 
 // entries of virtual tables
-// format: ${ReturnType} ${Name}_get_<Method>_impl(${Name}Type* this)
+// format: ${ReturnType} ${Name}_get_<Field>_impl(${Name}Type* this)
 // The ReturnType normally is the type of field. But if it's same as "predefined
 // type" it's converted to "predefined type" and marked as leaf function. Leaf
 // functions doesn't have vtable and returns "predefined type".
 struct Uint128 Header_get_nonce_impl(struct HeaderType *this);
 struct HeaderType Block_get_header_impl(struct BlockType *block);
-uint32_t RawHeader_get_version_impl(struct RawHeaderType *raw_header);
+Uint32 RawHeader_get_version_impl(struct RawHeaderType *raw_header);
 struct RawHeaderType Header_get_raw_impl(struct HeaderType *this);
 
 typedef struct HeaderVTable {
@@ -545,9 +567,9 @@ struct Uint128 Header_get_nonce_impl(struct HeaderType *this) {
 }
 
 // leaf function
-uint32_t RawHeader_get_version_impl(struct RawHeaderType *this) {
+Uint32 RawHeader_get_version_impl(struct RawHeaderType *this) {
   mol_seg_t s = MolReader_RawHeader_get_version(&this->seg);
-  return mol_unpack_number(this->seg.ptr);
+  return convert_to_Uint32(&this->seg);
 }
 
 // node function
