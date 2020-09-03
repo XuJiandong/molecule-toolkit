@@ -53,7 +53,7 @@ It can read data partially with great performance. If we need only several field
 What if we need almost every field of the data structure? The old molecule API has no good solution: we need to write a lot of code like above to fetch all the fields.
 
 ### Problem on reader (2)
-If we look into the code of [read_Block](https://github.com/XuJiandong/molecule-toolkit/blob/ceac3b407ec13b689fc92bb212add65c8d432fd6/src/blockchain-builder.c#L370-L386), we find that mol_seg_t is everywhere: that's the problem. We can't use type system of C compilers to check whether we use the API correctly. The type system can help programmer to possibilities for bugs, checking that the code is written in a consistent way, giving hint while coding, etc.
+If we look into the code of [read_Block](https://github.com/XuJiandong/molecule-toolkit/blob/ceac3b407ec13b689fc92bb212add65c8d432fd6/src/blockchain-builder.c#L370-L386), we find that mol_seg_t is everywhere: that's the problem. We can't use type system of C compilers to check whether we use the API correctly. The type system can help programmer to reduce possibilities for bugs, checking that the code is written in a consistent way, giving hint while coding, etc.
 
 In order to solve this problem, we will try to introduce known types in [Extra support for known types](#extra-support-for-known-types). Also, we will try to add more type systems to replace "mol_seg_t", see [Add type system to API](#add-type-system-to-API).
 
@@ -138,28 +138,39 @@ Also we can provide an OOP version, like below:
 ```C
 void read_Block(BlockType data) {
     //TransactionVecType txs = Block_get_transactions(&data); 
-    TransactionVecType txs = data.get_trasactions(&data);
+    TransactionVecType txs = data.tbl->trasactions(&data);
     //TransactionType tx0 = TransactionVec_get(&txs, 0);
-    TransactionType tx0 = txs.get(&txs, 0);
+    TransactionType tx0 = txs.tbl->get(&txs, 0);
     //RawTransactionType raw = Transaction_get_raw(&tx0);
-    RawTransactionType raw = tx0.get_raw(&tx0);
+    RawTransactionType raw = tx0.tbl->raw(&tx0);
     //CellOutputVecType outputs = RawTransaction_get_outputs(&raw);
-    CellOutputVecType outputs = raw.get_outputs(&raw);
+    CellOutputVecType outputs = raw.tbl->outputs(&raw);
     //CellOutputType output = CellOutputVec_get(&outputs, 0);
-    CellOutputType output = outputs.get(&outputs, 0);
+    CellOutputType output = outputs.tbl->get(&outputs, 0);
     //uint64_t capacity = CellOutput_get_capacity(&output);
-    uint64_t capacity = output.get_capacity(&output);
+    uint64_t capacity = output.tbl->capacity(&output);
     assert(capacity == 1000);
 
     //ScriptType lock = CellOutput_get_lock(&output);
-    ScriptType lock = output.get_locK(&output);
+    ScriptType lock = output.tbl->lock(&output);
     //Byte32Type code_hash = Script_get_code_hash(&lock);
-    Byte32Type code_hash = lock.get_code_hash(&lock);
+    Byte32Type code_hash = lock.tbl->code_hash(&lock);
 ```
 
-Note, every function returns a "struct" instead of a "pointer to struct". It can avoid allocate memory on heap, using stack allocating instead. So we need to make sure the "struct" can't be very large.
+Note, every function returns a "struct" instead of a "pointer to struct". It can avoid allocate memory on heap, using stack allocating instead. So we need to make sure the "struct" can't be very large. This "struct", in OOP, is well known as "instance".
 
-This is a draft which is subject to change.
+We invoke methods directly using:
+```C
+lock.tbl->code_hash
+```
+instead of
+```C
+lock.get_code_hash
+```
+The reason is we need to put methods together in a table (an array of methods), and only put pointer to table (tbl) in struct. This is like [virtual methods table](https://en.wikipedia.org/wiki/Virtual_method_table) in C++. It's a tricky to reduce struct size and save some copy operations while creating a new struct. 
+
+
+Note: This is a draft which is subject to change.
 
 
 ## Definition of the "Data Structure"

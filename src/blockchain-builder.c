@@ -13,7 +13,7 @@ mol_seg_t build_RawHeader() {
   mol_builder_t b;
   mol_seg_res_t res;
   MolBuilder_RawHeader_init(&b);
-  uint32_t version = 0;
+  uint32_t version = 0xFF;
   uint32_t compact_target = 0x12;
   uint64_t timestamp = 0x23;
   uint64_t number = 0x34;
@@ -173,7 +173,7 @@ mol_seg_t build_Header() {
   MolBuilder_Header_init(&b);
   mol_seg_t raw = build_RawHeader();
   MolBuilder_Header_set_raw(&b, raw.ptr);
-  byte nonce[16] = {0};
+  byte nonce[16] = {0x12, 0x34};
   MolBuilder_Header_set_nonce(&b, nonce);
   res = MolBuilder_Header_build(b);
   assert(res.errno == 0);
@@ -385,9 +385,200 @@ void read_Block(mol_seg_t data) {
   assert(code_hash.ptr[0] == 0x12 && code_hash.ptr[1] == 0x34);
 }
 
+// -----------------------------------------------------
+// start of sample API
+// -----------------------------------------------------
+
+//
+// referenced API or macros
+//
+#define ASSERT assert
+
+//
+// predefined type
+//
+typedef struct Uint128 {
+  uint8_t *data;  // 16 bytes
+} Uint128;
+
+Uint128 convert_to_uint128(mol_seg_t *seg) {
+  Uint128 ret;
+  ret.data = seg->ptr;
+  ASSERT(seg->size == 16);
+  return ret;
+}
+
+typedef struct Byte32 {
+  uint8_t *data;  // 32 bytes
+} Byte32;
+
+Byte32 convert_to_byte32(mol_seg_t *seg) {
+  Byte32 ret;
+  ret.data = seg->ptr;
+  ASSERT(seg->size == 32);
+  return ret;
+}
+
+//
+// auto generated content
+//
+
+// main class
+// format: ${Name}Type
+struct BlockType;
+struct HeaderType;
+struct RawHeaderType;
+
+// main classes' virtual tables
+// format: ${Name}VTable
+struct BlockVTable;
+struct HeaderVTable;
+struct RawHeaderVTable;
+
+// functions to get virtual tables
+// format: ${Name}VTable* Get${Name}VTable
+struct BlockVTable *GetBlockVTable(void);
+struct HeaderVTable *GetHeaderVTable(void);
+struct RawHeaderVTable *GetRawHeaderVTable(void);
+
+// entries of virtual tables
+// format: ${ReturnType} ${Name}_get_<Method>_impl(${Name}Type* this)
+// The ReturnType normally is the type of field. But if it's same as "predefined
+// type" it's converted to "predefined type" and marked as leaf function. Leaf
+// functions doesn't have vtable and returns "predefined type".
+struct Uint128 Header_get_nonce_impl(struct HeaderType *this);
+struct HeaderType Block_get_header_impl(struct BlockType *block);
+uint32_t RawHeader_get_version_impl(struct RawHeaderType *raw_header);
+struct RawHeaderType Header_get_raw_impl(struct HeaderType *this);
+
+typedef struct HeaderVTable {
+  Uint128 (*nonce)(struct HeaderType *);
+  struct RawHeaderType (*raw)(struct HeaderType *);
+} HeaderVTable;
+
+typedef struct HeaderType {
+  mol_seg_t seg;
+  HeaderVTable *tbl;
+} HeaderType;
+
+typedef struct BlockVTable {
+  struct HeaderType (*header)(struct BlockType *);
+  //  Block_get_uncles_func uncles;
+  //  Block_get_transaction_func transactions;
+  //  Block_get_proposals_func ProposalShortIdVec;
+} BlockVTable;
+
+typedef struct BlockType {
+  mol_seg_t seg;
+  BlockVTable *tbl;
+} BlockType;
+
+BlockType make_Block(mol_seg_t *seg) {
+  BlockType ret;
+  ret.seg = *seg;
+  ret.tbl = GetBlockVTable();
+  return ret;
+}
+
+typedef struct RawHeaderVTable {
+  uint32_t (*version)(struct RawHeaderType *);
+  // TODO:
+} RawHeaderVTable;
+
+typedef struct RawHeaderType {
+  mol_seg_t seg;
+  RawHeaderVTable *tbl;
+} RawHeaderType;
+
+struct RawHeaderType make_RawHeader(mol_seg_t *seg) {
+  RawHeaderType ret;
+  ret.seg = *seg;
+  ret.tbl = GetRawHeaderVTable();
+  return ret;
+}
+
+//
+// functions to get virtual tables
+//
+struct BlockVTable *GetBlockVTable(void) {
+  static BlockVTable s_vtable;
+  static int inited = 0;
+  if (inited) return &s_vtable;
+  s_vtable.header = Block_get_header_impl;
+  // TODO, add more fields
+  return &s_vtable;
+}
+
+struct HeaderVTable *GetHeaderVTable(void) {
+  static HeaderVTable s_vtable;
+  static int inited = 0;
+  if (inited) return &s_vtable;
+  s_vtable.nonce = Header_get_nonce_impl;
+  s_vtable.raw = Header_get_raw_impl;
+  return &s_vtable;
+}
+
+struct RawHeaderVTable *GetRawHeaderVTable(void) {
+  static RawHeaderVTable s_vtable;
+  static int inited = 0;
+  if (inited) return &s_vtable;
+  s_vtable.version = RawHeader_get_version_impl;
+  // TODO, add more fields
+  return &s_vtable;
+}
+
+//
+// entries of virtual tables
+//
+
+// node function
+struct HeaderType Block_get_header_impl(struct BlockType *block) {
+  struct HeaderType header;
+  header.seg = MolReader_Block_get_header(&block->seg);
+  header.tbl = GetHeaderVTable();
+  return header;
+}
+// leaf function
+struct Uint128 Header_get_nonce_impl(struct HeaderType *this) {
+  mol_seg_t s = MolReader_Header_get_nonce(&this->seg);
+  return convert_to_uint128(&s);
+}
+
+// leaf function
+uint32_t RawHeader_get_version_impl(struct RawHeaderType *this) {
+  mol_seg_t s = MolReader_RawHeader_get_version(&this->seg);
+  return mol_unpack_number(this->seg.ptr);
+}
+
+// node function
+RawHeaderType Header_get_raw_impl(struct HeaderType *this) {
+  struct RawHeaderType raw;
+  raw.seg = MolReader_Header_get_raw(&this->seg);
+  raw.tbl = GetRawHeaderVTable();
+  return raw;
+}
+
+//
+// end of Sample API
+//
+void read_with_new_api(mol_seg_t data) {
+  // note, the life time of the memory which data.ptr points to,
+  // should be longer than any other objects(header, raw, egc)
+  // which are derived from "block"
+  BlockType block = make_Block(&data);
+  HeaderType header = block.tbl->header(&block);
+  Uint128 nonce = header.tbl->nonce(&header);
+  assert(nonce.data[0] == 0x12 && nonce.data[1] == 0x34);
+  RawHeaderType raw = header.tbl->raw(&header);
+  uint32_t version = raw.tbl->version(&raw);
+  assert(version == 0xFF);
+  printf("done");
+}
+
 int main(int argc, const char *argv[]) {
   mol_seg_t block = build_Block();
   read_Block(block);
 
+  read_with_new_api(block);
   return 0;
 }
