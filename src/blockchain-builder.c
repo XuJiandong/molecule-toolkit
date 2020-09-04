@@ -394,52 +394,99 @@ void read_Block(mol_seg_t data) {
 //
 #define ASSERT assert
 
-//
 // predefined type
-// If types defined in schema, are the same as below (case insensitive)
-// they will be converted to the corresponding types automatically instead of just
-// returning raw byte array.
-typedef struct Byte32 {
-  uint8_t *data;  // 32 bytes
-} Byte32;
+// If the types defined in schema is fundamental type:
+// 1. dynvec of byte(<byte>) or
+// 2. array([byte; N])
+// They will be converted to the type mol_seg_t automatically
+// 3. byte
+// it will be converted to uint8_t.
 
-typedef struct Uint128 {
-  uint8_t *data;  // 16 bytes
-} Uint128;
-typedef uint64_t Uint64;
-typedef int64_t Int64;
-typedef uint32_t Uint32;
-typedef int32_t Int32;
-typedef uint16_t Uint16;
-typedef int16_t Int16;
-typedef uint8_t Uint8;
-typedef int8_t Int8;
+// predefined type
+// If the types defined in schema:
+// 1. the name is same as below (case insensitive)
+// 2. the type is matched (e.g. Uint32 should have type with [byte; 4])
+// they will be converted to the corresponding types automatically instead of
+// just returning raw byte array.
+//
+typedef uint64_t Uint64;  // [byte; 8]
+typedef int64_t Int64;    // [byte; 8]
+typedef uint32_t Uint32;  // [byte; 4]
+typedef int32_t Int32;    // [byte; 4]
+typedef uint16_t Uint16;  // [byte; 2]
+typedef int16_t Int16;    // [byte; 2]
+typedef uint8_t Uint8;    // [byte; 1]
+typedef int8_t Int8;      // [byte; 1]
 
 // converting function
 // format: convert_to_${Type}
-Byte32 convert_to_Byte32(mol_seg_t *seg) {
-  Byte32 ret;
-  ret.data = seg->ptr;
-      ASSERT(seg->size == 32);
+#define SWAP(a, b, t) \
+  {                   \
+    (t) = (a);        \
+    (a) = (b);        \
+    (b) = (t);        \
+  }
+#define IS_LE()       \
+  ((union {           \
+     uint16_t i;      \
+     unsigned char c; \
+   }){.i = 1}         \
+       .c)
+
+void change_endian(uint8_t *ptr, int size) {
+  if (IS_LE()) return;
+  ASSERT(size % 2 == 0);
+  uint8_t t = 0;
+  for (int i = 0; i < size / 2; i++) {
+    SWAP(ptr[i], ptr[size - 1 - i], t);
+  }
+}
+
+Uint64 convert_to_Uint64(mol_seg_t *seg) {
+  uint64_t ret = *((uint64_t *)seg->ptr);
+  change_endian((uint8_t *)&ret, sizeof(ret));
   return ret;
 }
 
-Uint128 convert_to_uint128(mol_seg_t *seg) {
-  Uint128 ret;
-  ret.data = seg->ptr;
-  ASSERT(seg->size == 16);
+Int64 convert_to_Int64(mol_seg_t *seg) {
+  int64_t ret = *((int64_t *)seg->ptr);
+  change_endian((uint8_t *)&ret, sizeof(ret));
   return ret;
 }
 
 Uint32 convert_to_Uint32(mol_seg_t *seg) {
-  return (Uint32)mol_unpack_number(seg->ptr);
+  uint32_t ret = *((uint32_t *)seg->ptr);
+  change_endian((uint8_t *)&ret, sizeof(ret));
+  return ret;
 }
 
 Int32 convert_to_Int32(mol_seg_t *seg) {
-  return (Int32)mol_unpack_number(seg->ptr);
+  int32_t ret = *((int32_t *)seg->ptr);
+  change_endian((uint8_t *)&ret, sizeof(ret));
+  return ret;
 }
 
-// TODO: missing converting function
+Uint16 convert_to_Uint16(mol_seg_t *seg) {
+  uint16_t ret = *((uint16_t *)seg->ptr);
+  change_endian((uint8_t *)&ret, sizeof(ret));
+  return ret;
+}
+
+Int16 convert_to_Int16(mol_seg_t *seg) {
+  int16_t ret = *((int16_t *)seg->ptr);
+  change_endian((uint8_t *)&ret, sizeof(ret));
+  return ret;
+}
+
+Uint8 convert_to_Uint8(mol_seg_t *seg) {
+  uint8_t ret = *((uint8_t *)seg->ptr);
+  return ret;
+}
+
+Int8 convert_to_Int8(mol_seg_t *seg) {
+  int8_t ret = *((int8_t *)seg->ptr);
+  return ret;
+}
 
 //
 // auto generated content
@@ -450,31 +497,119 @@ Int32 convert_to_Int32(mol_seg_t *seg) {
 struct BlockType;
 struct HeaderType;
 struct RawHeaderType;
+struct TransactionVecType;
+struct TransactionType;
+struct BytesVecType;
+struct RawTransactionType;
 
 // main classes' virtual tables
 // format: ${Name}VTable
 struct BlockVTable;
 struct HeaderVTable;
 struct RawHeaderVTable;
+struct TransactionVecVTable;
+struct TransactionVTable;
+struct BytesVecVTable;
+struct RawTransactionVTable;
 
 // functions to get virtual tables
 // format: ${Name}VTable* Get${Name}VTable
 struct BlockVTable *GetBlockVTable(void);
 struct HeaderVTable *GetHeaderVTable(void);
 struct RawHeaderVTable *GetRawHeaderVTable(void);
+struct TransactionVecVTable *GetTransactionVecVTable(void);
+struct TransactionVTable *GetTransactionVTable(void);
+struct BytesVecVTable *GetBytesVecVTable(void);
+struct RawTransactionVTable *GetRawTransactionVTable(void);
 
 // entries of virtual tables
 // format: ${ReturnType} ${Name}_get_<Field>_impl(${Name}Type* this)
 // The ReturnType normally is the type of field. But if it's same as "predefined
 // type" it's converted to "predefined type" and marked as leaf function. Leaf
 // functions doesn't have vtable and returns "predefined type".
-struct Uint128 Header_get_nonce_impl(struct HeaderType *this);
+mol_seg_t Header_get_nonce_impl(struct HeaderType *this);
 struct HeaderType Block_get_header_impl(struct BlockType *block);
+struct TransactionVecType Block_get_transactions_impl(struct BlockType *block);
 Uint32 RawHeader_get_version_impl(struct RawHeaderType *raw_header);
 struct RawHeaderType Header_get_raw_impl(struct HeaderType *this);
+struct TransactionType TransactionVec_at_impl(struct TransactionVecType *this,
+                                              size_t index);
+size_t TransactionVec_len_impl(struct TransactionVecType *this);
+struct BytesVecType Transaction_get_witnesses(struct TransactionType *this);
+mol_seg_t BytesVec_at_impl(struct BytesVecType *this, size_t index);
+size_t BytesVec_len_impl(struct BytesVecType *this);
+uint32_t RawTransaction_get_version_impl(struct RawTransactionType *this);
+struct RawTransactionType Transaction_get_raw(struct TransactionType *this);
+
+typedef struct RawTransactionVTable {
+  uint32_t (*version)(struct RawTransactionType *);
+} RawTransactionVTable;
+
+typedef struct RawTransactionType {
+  mol_seg_t seg;
+  RawTransactionVTable *tbl;
+} RawTransactionType;
+
+RawTransactionType make_RawTransaction(mol_seg_t *seg) {
+  RawTransactionType ret;
+  ret.seg = *seg;
+  ret.tbl = GetRawTransactionVTable();
+  return ret;
+}
+
+typedef struct BytesVecVTable {
+  mol_seg_t (*at)(struct BytesVecType *, size_t index);
+  size_t (*len)(struct BytesVecType *);
+} BytesVecVTable;
+
+typedef struct BytesVecType {
+  mol_seg_t seg;
+  BytesVecVTable *tbl;
+} BytesVecType;
+
+BytesVecType make_BytesVec(mol_seg_t *seg) {
+  BytesVecType ret;
+  ret.seg = *seg;
+  ret.tbl = GetBytesVecVTable();
+  return ret;
+}
+
+typedef struct TransactionVecVTable {
+  struct TransactionType (*at)(struct TransactionVecType *, size_t index);
+  size_t (*len)(struct TransactionVecType *);
+} TransactionVecVTable;
+
+typedef struct TransactionVecType {
+  mol_seg_t seg;
+  TransactionVecVTable *tbl;
+} TransactionVecType;
+
+TransactionVecType make_TransactionVec(mol_seg_t *seg) {
+  TransactionVecType ret;
+  ret.seg = *seg;
+  ret.tbl = GetTransactionVecVTable();
+  return ret;
+}
+
+typedef struct TransactionVTable {
+  BytesVecType (*witnesses)(struct TransactionType *);
+  RawTransactionType (*raw)(struct TransactionType *);
+} TransactionVTable;
+
+typedef struct TransactionType {
+  mol_seg_t seg;
+  TransactionVTable *tbl;
+} TransactionType;
+
+TransactionType make_Transaction(mol_seg_t *seg) {
+  TransactionType ret;
+  ret.seg = *seg;
+  ret.tbl = GetTransactionVTable();
+  return ret;
+}
 
 typedef struct HeaderVTable {
-  Uint128 (*nonce)(struct HeaderType *);
+  mol_seg_t (*nonce)(struct HeaderType *);
   struct RawHeaderType (*raw)(struct HeaderType *);
 } HeaderVTable;
 
@@ -483,11 +618,17 @@ typedef struct HeaderType {
   HeaderVTable *tbl;
 } HeaderType;
 
+HeaderType make_Header(mol_seg_t *seg) {
+  HeaderType ret;
+  ret.seg = *seg;
+  ret.tbl = GetHeaderVTable();
+  return ret;
+}
+
 typedef struct BlockVTable {
   struct HeaderType (*header)(struct BlockType *);
-  //  Block_get_uncles_func uncles;
-  //  Block_get_transaction_func transactions;
-  //  Block_get_proposals_func ProposalShortIdVec;
+  struct TransactionVecType (*transactions)(struct BlockType *);
+  // TODO
 } BlockVTable;
 
 typedef struct BlockType {
@@ -527,6 +668,7 @@ struct BlockVTable *GetBlockVTable(void) {
   static int inited = 0;
   if (inited) return &s_vtable;
   s_vtable.header = Block_get_header_impl;
+  s_vtable.transactions = Block_get_transactions_impl;
   // TODO, add more fields
   return &s_vtable;
 }
@@ -549,35 +691,119 @@ struct RawHeaderVTable *GetRawHeaderVTable(void) {
   return &s_vtable;
 }
 
+struct TransactionVecVTable *GetTransactionVecVTable(void) {
+  static TransactionVecVTable s_vtable;
+  static int inited = 0;
+  if (inited) return &s_vtable;
+  s_vtable.at = TransactionVec_at_impl;
+  s_vtable.len = TransactionVec_len_impl;
+  return &s_vtable;
+}
+
+struct TransactionVTable *GetTransactionVTable(void) {
+  static TransactionVTable s_vtable;
+  static int inited = 0;
+  if (inited) return &s_vtable;
+  s_vtable.witnesses = Transaction_get_witnesses;
+  s_vtable.raw = Transaction_get_raw;
+  return &s_vtable;
+}
+
+struct BytesVecVTable *GetBytesVecVTable(void) {
+  static BytesVecVTable s_vtable;
+  static int inited = 0;
+  if (inited) return &s_vtable;
+  s_vtable.len = BytesVec_len_impl;
+  s_vtable.at = BytesVec_at_impl;
+
+  return &s_vtable;
+}
+
+struct RawTransactionVTable *GetRawTransactionVTable(void) {
+  static RawTransactionVTable s_vtable;
+  static int inited = 0;
+  if (inited) return &s_vtable;
+  s_vtable.version = RawTransaction_get_version_impl;
+  return &s_vtable;
+}
+
 //
 // entries of virtual tables
 //
-
-// node function
 struct HeaderType Block_get_header_impl(struct BlockType *block) {
   struct HeaderType header;
   header.seg = MolReader_Block_get_header(&block->seg);
   header.tbl = GetHeaderVTable();
   return header;
 }
-// leaf function
-struct Uint128 Header_get_nonce_impl(struct HeaderType *this) {
-  mol_seg_t s = MolReader_Header_get_nonce(&this->seg);
-  return convert_to_uint128(&s);
+
+struct TransactionVecType Block_get_transactions_impl(struct BlockType *block) {
+  struct TransactionVecType header;
+  header.seg = MolReader_Block_get_transactions(&block->seg);
+  header.tbl = GetTransactionVecVTable();
+  return header;
 }
 
-// leaf function
+mol_seg_t Header_get_nonce_impl(struct HeaderType *this) {
+  // nonce is an array, can return directly
+  return MolReader_Header_get_nonce(&this->seg);
+}
+
 Uint32 RawHeader_get_version_impl(struct RawHeaderType *this) {
   mol_seg_t s = MolReader_RawHeader_get_version(&this->seg);
-  return convert_to_Uint32(&this->seg);
+  return convert_to_Uint32(&s);
 }
 
-// node function
 RawHeaderType Header_get_raw_impl(struct HeaderType *this) {
   struct RawHeaderType raw;
   raw.seg = MolReader_Header_get_raw(&this->seg);
   raw.tbl = GetRawHeaderVTable();
   return raw;
+}
+
+TransactionType TransactionVec_at_impl(struct TransactionVecType *this,
+                                       size_t index) {
+  struct TransactionType ret;
+  mol_seg_res_t res = MolReader_TransactionVec_get(&this->seg, index);
+  ASSERT(res.errno == 0);
+  ret.seg = res.seg;
+  ret.tbl = GetTransactionVTable();
+  return ret;
+}
+
+size_t TransactionVec_len_impl(struct TransactionVecType *this) {
+  return (size_t)MolReader_TransactionVec_length(&this->seg);
+}
+
+BytesVecType Transaction_get_witnesses(struct TransactionType *this) {
+  struct BytesVecType ret;
+  ret.seg = MolReader_Transaction_get_witnesses(&this->seg);
+  ret.tbl = GetBytesVecVTable();
+  return ret;
+}
+
+mol_seg_t BytesVec_at_impl(struct BytesVecType *this, size_t index) {
+  mol_seg_t ret;
+  mol_seg_res_t res = MolReader_BytesVec_get(&this->seg, index);
+  ASSERT(res.errno == 0);
+  // Bytes is a dynvec of byte, need to be converted.
+  return MolReader_Bytes_raw_bytes(&res.seg);
+}
+
+size_t BytesVec_len_impl(struct BytesVecType *this) {
+  return (size_t)MolReader_BytesVec_length(&this->seg);
+}
+
+uint32_t RawTransaction_get_version_impl(struct RawTransactionType *this) {
+  mol_seg_t s = MolReader_RawTransaction_get_version(&this->seg);
+  return convert_to_Uint32(&s);
+}
+
+RawTransactionType Transaction_get_raw(struct TransactionType *this) {
+  struct RawTransactionType ret;
+  ret.seg = MolReader_Transaction_get_raw(&this->seg);
+  ret.tbl = GetRawTransactionVTable();
+  return ret;
 }
 
 //
@@ -589,11 +815,26 @@ void read_with_new_api(mol_seg_t data) {
   // which are derived from "block"
   BlockType block = make_Block(&data);
   HeaderType header = block.tbl->header(&block);
-  Uint128 nonce = header.tbl->nonce(&header);
-  assert(nonce.data[0] == 0x12 && nonce.data[1] == 0x34);
+  mol_seg_t nonce = header.tbl->nonce(&header);
+  assert(nonce.size == 16 && nonce.ptr[0] == 0x12 && nonce.ptr[1] == 0x34);
   RawHeaderType raw = header.tbl->raw(&header);
   uint32_t version = raw.tbl->version(&raw);
   assert(version == 0xFF);
+  TransactionVecType txs = block.tbl->transactions(&block);
+  size_t length = txs.tbl->len(&txs);
+  assert(length == 2);
+  TransactionType tx0 = txs.tbl->at(&txs, 0);
+  BytesVecType witnesses = tx0.tbl->witnesses(&tx0);
+  size_t witnesses_length = witnesses.tbl->len(&witnesses);
+  assert(witnesses_length == 2);
+
+  mol_seg_t witness = witnesses.tbl->at(&witnesses, 0);
+  assert(witness.size == 3 && witness.ptr[0] == 0x12);
+
+  RawTransactionType raw_tx = tx0.tbl->raw(&tx0);
+  uint32_t tx_version = raw_tx.tbl->version(&raw_tx);
+  assert(tx_version == 0x12);
+
   printf("done");
 }
 

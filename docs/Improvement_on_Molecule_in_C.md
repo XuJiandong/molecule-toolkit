@@ -167,11 +167,55 @@ instead of
 ```C
 lock.get_code_hash
 ```
-The reason is we need to put methods together in a table (an array of methods), and only put pointer to table (tbl) in struct. This is like [virtual methods table](https://en.wikipedia.org/wiki/Virtual_method_table) in C++. It's a tricky to reduce struct size and save some copy operations while creating a new struct. 
+The reason is we need to put methods together in a table (an array of methods), and only put pointer to table (tbl) in struct. This is like [virtual methods table](https://en.wikipedia.org/wiki/Virtual_method_table) in C++. It's a trick to reduce struct size and save some copy operations while creating a new struct. We name the "tbl": vtable.
 
 
 Note: This is a draft which is subject to change.
 
+### The vtable "tbl"  and special methods
+In [Molecule Spec](https://github.com/nervosnetwork/rfcs/blob/master/rfcs/0008-serialization/0008-serialization.md), there are actually 2 categories types:
+1. Fundamental type
+2. Compound type
+
+There are only 3 definitions in schema which are "Fundamental type" category:
+1. array of byte
+2. fixvec of byte
+3. byte
+
+All the others are "Compound type", including:
+1. struct
+2. dynvec
+3. table
+4. option
+5. union
+
+Note: The names "Fundamental type" and "Compound type" are not defined in official RFC, they're just concept used here. The standard to classify these two is whether the type
+can be broken down into small ones except for byte.
+
+The fundamental type has no vtable field. They are finally converted to a special predefined type. The field "tbl" doesn't exist in predefined type.
+
+The compound type have different vtable according to its concrete type. For example, for every fields in struct/table, it occupies one method in vtable entry with same name. The dynvec has special method like "len" and "at". Sample usage below:
+
+```C
+  TransactionVecType txs = block.tbl->transactions(&block);
+  size_t length = txs.tbl->len(&txs);
+  TransactionType tx0 = txs.tbl->at(&txs, 0);
+```
+The dynvec type (TransactionVecType) has 2 methods: "len" and "at" in "tbl".
+The "option" and "union" also have their special methods.
+
+For one of the fundamental type, array, if the type name is matched with special name, it is converted to special type, 
+mentioned in [Extra support for known types](#extra-support-for-known-types). They are:
+```text
+array Uint8 [byte; 1]; // converted to uint8_t
+array Int8 [byte; 1];  // converted to int8_t
+array Uint16 [byte; 2]; // converted to uint16_t
+array Int16 [byte; 2]; // converted to int16_t
+array Uint32 [byte; 4]; // converted to uint32_t
+array Int32 [byte; 4]; // converted to int32_t
+array Uint64 [byte; 8]; // converted to uint64_t
+array Int64 [byte; 8]; // converted to int64_t
+```
 
 ## Definition of the "Data Structure"
 
@@ -180,4 +224,4 @@ This is the most difficult part due to the limitation of the C programming langu
 
 ## Conclusion
 From a demo usage of molecule, we know that it supports reading partially with great performance. But it doesn't support full reader and builder.
-The difficult part is how to design such a data structure by the molecule compile in C programming language.
+The difficult part is how to design such a data structure by the molecule compile in C programming language. Adding type system to existing API, we can make it easy to write code correctly and avoid a lot of manual converting.
