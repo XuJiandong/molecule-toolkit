@@ -94,12 +94,12 @@ void read_Block(mol_seg_t data) {
   mol_seg_t txs = MolReader_Block_get_transactions(&data);
   mol_seg_res_t res = MolReader_TransactionVec_get(&txs, 0);
   assert(res.errno == 0);
-  mol_seg_t tx0 = res.seg;
+  mol_seg_t tx0 = res.cur;
   mol_seg_t raw = MolReader_Transaction_get_raw(&tx0);
   mol_seg_t outputs = MolReader_RawTransaction_get_outputs(&raw);
   res = MolReader_CellOutputVec_get(&outputs, 0);
   assert(res.errno == 0);
-  mol_seg_t output = res.seg;
+  mol_seg_t output = res.cur;
   mol_seg_t capacity = MolReader_CellOutput_get_capacity(&output);
   assert(mol_unpack_number(capacity.ptr) == 1000);
 
@@ -216,6 +216,45 @@ array Int32 [byte; 4]; // converted to int32_t
 array Uint64 [byte; 8]; // converted to uint64_t
 array Int64 [byte; 8]; // converted to int64_t
 ```
+
+
+## Improvement on mol_seg_t
+mol_seg_t, is the most important data structure in old molecule API:
+```C
+typedef struct {
+    uint8_t                     *ptr;               // Pointer
+    mol_num_t                   size;               // Full size
+} mol_seg_t;
+```
+It comes with an assumption: the data has been loaded into memory already. It's not a good design to system like [CKB-VM](https://github.com/nervosnetwork/ckb-vm) which only has very limited memory. 
+
+As we look into the [Molecule Spec](https://github.com/nervosnetwork/rfcs/blob/master/rfcs/0008-serialization/0008-serialization.md), if we only need some part of data, we can get the data through some "hops". We can read the header only, estimating where to hop and don't need to read the remaining data. For a lot of scenarios which only need read part of data, we can have a load-on-demand mechanic.
+
+This load-on-demand mechanic is introduced by the following [data structure](https://github.com/XuJiandong/molecule-toolkit/blob/2a843898f8bd228e93399c7d450948759c1edc35/include/molecule2_reader.h#L110-L115
+):
+```C
+typedef struct mol2_cursor_t {
+  uint32_t offset;     // offset of slice
+  uint32_t size;       // size of slice
+  mol2_source_t read;  // data source
+  void *arg;           // data source
+} mol2_cursor_t;
+```
+The "read" together with "arg" are the data source. The "offset" together with "size", is an "view"/"slice" of the data source. Here the relationship between "read" and the "arg" is the same as "fopen" and "FILE*" in standard C library.
+
+We have a very simple implementation of "read" field over memory: [mol2_source_memory](https://github.com/XuJiandong/molecule-toolkit/blob/2a843898f8bd228e93399c7d450948759c1edc35/include/molecule2_reader.h#L118-L123). We can also make another one based on syscall.
+
+
+When "mol2_cursor_t" is returned from one function, it doesn't access memory. As the name "cursor" suggests, it's only an cursor. We can access memory on demand by "mol2_read_at", for example:
+```C
+    mol2_cursor_t witness_cur = witnesses.tbl->at(&witnesses, 0);
+    uint8_t witness[witness_cur.size];
+    mol2_read_at(&witness_cur, witness, witness_cur.size);
+    assert(witness_cur.size == 3 && witness[0] == 0x12 && witness[1] == 0x34);
+```
+The "mol2_read_at" is not called if we don't have interests on content of memory. Here is an [example](https://github.com/XuJiandong/molecule-toolkit/blob/2a843898f8bd228e93399c7d450948759c1edc35/src/new-api-demo.c#L12-L42): it only accesses memory by "mol2_read_at" twice: one for nonce and the other for witness.
+
+All changes are located in [this file](https://github.com/XuJiandong/molecule-toolkit/blob/master/include/molecule2_reader.h). It's compatible with old molecule API: you can use it solely or use it with old API.
 
 ## Definition of the "Data Structure"
 
