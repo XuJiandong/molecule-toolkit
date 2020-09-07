@@ -13,5 +13,6 @@ add_executable(builder-example
 
 add_executable(blockchain-builder
         include/molecule_reader.h
+        include/molecule2_reader.h
         include/molecule_builder.h
         src/blockchain-builder.c)

@@ -15,6 +15,8 @@ generated/types-api.c: mol/types.mol
 fmt: src/builder-example.c src/blockchain-builder.c
 	clang-format -i -style=Google src/builder-example.c
 	clang-format -i -style=Google src/blockchain-builder.c
+	clang-format -i -style=Google include/molecule2_reader.h
+	clang-format -i -style=Google generated/blockchain-api2.h
 
 build/blockchain-builder: src/blockchain-builder.c
 	$(CC) $(CFLAGS) $(LOCAL_CFLAGS) $< -o $@
