@@ -39,7 +39,7 @@ struct RawTransactionVTable *GetRawTransactionVTable(void);
 // The ReturnType normally is the type of field. But if it's same as "predefined
 // type" it's converted to "predefined type" and marked as leaf function. Leaf
 // functions doesn't have vtable and returns "predefined type".
-mol_seg_t Header_get_nonce_impl(struct HeaderType *this);
+mol2_cursor_t Header_get_nonce_impl(struct HeaderType *this);
 struct HeaderType Block_get_header_impl(struct BlockType *block);
 struct TransactionVecType Block_get_transactions_impl(struct BlockType *block);
 Uint32 RawHeader_get_version_impl(struct RawHeaderType *raw_header);
@@ -48,7 +48,7 @@ struct TransactionType TransactionVec_at_impl(struct TransactionVecType *this,
                                               size_t index);
 size_t TransactionVec_len_impl(struct TransactionVecType *this);
 struct BytesVecType Transaction_get_witnesses(struct TransactionType *this);
-mol_seg_t BytesVec_at_impl(struct BytesVecType *this, size_t index);
+mol2_cursor_t BytesVec_at_impl(struct BytesVecType *this, size_t index);
 size_t BytesVec_len_impl(struct BytesVecType *this);
 uint32_t RawTransaction_get_version_impl(struct RawTransactionType *this);
 struct RawTransactionType Transaction_get_raw(struct TransactionType *this);
@@ -58,30 +58,30 @@ typedef struct RawTransactionVTable {
 } RawTransactionVTable;
 
 typedef struct RawTransactionType {
-  mol_seg_t seg;
+  mol2_cursor_t cur;
   RawTransactionVTable *tbl;
 } RawTransactionType;
 
-RawTransactionType make_RawTransaction(mol_seg_t *seg) {
+RawTransactionType make_RawTransaction(mol2_cursor_t *cur) {
   RawTransactionType ret;
-  ret.seg = *seg;
+  ret.cur = *cur;
   ret.tbl = GetRawTransactionVTable();
   return ret;
 }
 
 typedef struct BytesVecVTable {
-  mol_seg_t (*at)(struct BytesVecType *, size_t index);
+  mol2_cursor_t (*at)(struct BytesVecType *, size_t index);
   size_t (*len)(struct BytesVecType *);
 } BytesVecVTable;
 
 typedef struct BytesVecType {
-  mol_seg_t seg;
+  mol2_cursor_t cur;
   BytesVecVTable *tbl;
 } BytesVecType;
 
-BytesVecType make_BytesVec(mol_seg_t *seg) {
+BytesVecType make_BytesVec(mol2_cursor_t *cur) {
   BytesVecType ret;
-  ret.seg = *seg;
+  ret.cur = *cur;
   ret.tbl = GetBytesVecVTable();
   return ret;
 }
@@ -92,13 +92,13 @@ typedef struct TransactionVecVTable {
 } TransactionVecVTable;
 
 typedef struct TransactionVecType {
-  mol_seg_t seg;
+  mol2_cursor_t cur;
   TransactionVecVTable *tbl;
 } TransactionVecType;
 
-TransactionVecType make_TransactionVec(mol_seg_t *seg) {
+TransactionVecType make_TransactionVec(mol2_cursor_t *cur) {
   TransactionVecType ret;
-  ret.seg = *seg;
+  ret.cur = *cur;
   ret.tbl = GetTransactionVecVTable();
   return ret;
 }
@@ -109,30 +109,30 @@ typedef struct TransactionVTable {
 } TransactionVTable;
 
 typedef struct TransactionType {
-  mol_seg_t seg;
+  mol2_cursor_t cur;
   TransactionVTable *tbl;
 } TransactionType;
 
-TransactionType make_Transaction(mol_seg_t *seg) {
+TransactionType make_Transaction(mol2_cursor_t *cur) {
   TransactionType ret;
-  ret.seg = *seg;
+  ret.cur = *cur;
   ret.tbl = GetTransactionVTable();
   return ret;
 }
 
 typedef struct HeaderVTable {
-  mol_seg_t (*nonce)(struct HeaderType *);
+  mol2_cursor_t (*nonce)(struct HeaderType *);
   struct RawHeaderType (*raw)(struct HeaderType *);
 } HeaderVTable;
 
 typedef struct HeaderType {
-  mol_seg_t seg;
+  mol2_cursor_t cur;
   HeaderVTable *tbl;
 } HeaderType;
 
-HeaderType make_Header(mol_seg_t *seg) {
+HeaderType make_Header(mol2_cursor_t *cur) {
   HeaderType ret;
-  ret.seg = *seg;
+  ret.cur = *cur;
   ret.tbl = GetHeaderVTable();
   return ret;
 }
@@ -144,13 +144,13 @@ typedef struct BlockVTable {
 } BlockVTable;
 
 typedef struct BlockType {
-  mol_seg_t seg;
+  mol2_cursor_t cur;
   BlockVTable *tbl;
 } BlockType;
 
-BlockType make_Block(mol_seg_t *seg) {
+BlockType make_Block(mol2_cursor_t *cur) {
   BlockType ret;
-  ret.seg = *seg;
+  ret.cur = *cur;
   ret.tbl = GetBlockVTable();
   return ret;
 }
@@ -161,13 +161,13 @@ typedef struct RawHeaderVTable {
 } RawHeaderVTable;
 
 typedef struct RawHeaderType {
-  mol_seg_t seg;
+  mol2_cursor_t cur;
   RawHeaderVTable *tbl;
 } RawHeaderType;
 
-struct RawHeaderType make_RawHeader(mol_seg_t *seg) {
+struct RawHeaderType make_RawHeader(mol2_cursor_t *cur) {
   RawHeaderType ret;
-  ret.seg = *seg;
+  ret.cur = *cur;
   ret.tbl = GetRawHeaderVTable();
   return ret;
 }
@@ -244,31 +244,31 @@ struct RawTransactionVTable *GetRawTransactionVTable(void) {
 //
 struct HeaderType Block_get_header_impl(struct BlockType *block) {
   struct HeaderType header;
-  header.seg = mol_table_slice_by_index(&block->seg, 0);
+  header.cur = mol2_table_slice_by_index(&block->cur, 0);
   header.tbl = GetHeaderVTable();
   return header;
 }
 
 struct TransactionVecType Block_get_transactions_impl(struct BlockType *block) {
   struct TransactionVecType header;
-  header.seg = mol_table_slice_by_index(&block->seg, 2);
+  header.cur = mol2_table_slice_by_index(&block->cur, 2);
   header.tbl = GetTransactionVecVTable();
   return header;
 }
 
-mol_seg_t Header_get_nonce_impl(struct HeaderType *this) {
+mol2_cursor_t Header_get_nonce_impl(struct HeaderType *this) {
   // nonce is an array, can return directly
-  return mol_slice_by_offset(&this->seg, 192, 16);
+  return mol2_slice_by_offset(&this->cur, 192, 16);
 }
 
 Uint32 RawHeader_get_version_impl(struct RawHeaderType *this) {
-  mol_seg_t s = mol_slice_by_offset(&this->seg, 0, 4);
+  mol2_cursor_t s = mol2_slice_by_offset(&this->cur, 0, 4);
   return convert_to_Uint32(&s);
 }
 
 RawHeaderType Header_get_raw_impl(struct HeaderType *this) {
   struct RawHeaderType raw;
-  raw.seg = mol_slice_by_offset(&this->seg, 0, 192);
+  raw.cur = mol2_slice_by_offset(&this->cur, 0, 192);
   raw.tbl = GetRawHeaderVTable();
   return raw;
 }
@@ -276,48 +276,44 @@ RawHeaderType Header_get_raw_impl(struct HeaderType *this) {
 TransactionType TransactionVec_at_impl(struct TransactionVecType *this,
                                        size_t index) {
   struct TransactionType ret;
-  mol_seg_res_t res = mol_dynvec_slice_by_index(&this->seg, index);
+  mol2_cursor_res_t res = mol2_dynvec_slice_by_index(&this->cur, index);
   ASSERT(res.errno == 0);
-  ret.seg = res.seg;
+  ret.cur = res.cur;
   ret.tbl = GetTransactionVTable();
   return ret;
 }
 
 size_t TransactionVec_len_impl(struct TransactionVecType *this) {
-  return (size_t)mol_dynvec_length(&this->seg);
+  return (size_t)mol2_dynvec_length(&this->cur);
 }
 
 BytesVecType Transaction_get_witnesses(struct TransactionType *this) {
   struct BytesVecType ret;
-  ret.seg = mol_table_slice_by_index(&this->seg, 1);
+  ret.cur = mol2_table_slice_by_index(&this->cur, 1);
   ret.tbl = GetBytesVecVTable();
   return ret;
 }
 
-mol_seg_t BytesVec_at_impl(struct BytesVecType *this, size_t index) {
-  mol_seg_t ret;
-  mol_seg_res_t res = mol_dynvec_slice_by_index(&this->seg, index);
+mol2_cursor_t BytesVec_at_impl(struct BytesVecType *this, size_t index) {
+  mol2_cursor_t ret;
+  mol2_cursor_res_t res = mol2_dynvec_slice_by_index(&this->cur, index);
   ASSERT(res.errno == 0);
   // Bytes is a dynvec of byte, need to be converted.
-  return mol_fixvec_slice_raw_bytes(&res.seg);
+  return mol2_fixvec_slice_raw_bytes(&res.cur);
 }
 
 size_t BytesVec_len_impl(struct BytesVecType *this) {
-  return (size_t)mol_dynvec_length(&this->seg);
+  return (size_t)mol2_dynvec_length(&this->cur);
 }
 
 uint32_t RawTransaction_get_version_impl(struct RawTransactionType *this) {
-  mol_seg_t s = mol_table_slice_by_index(&this->seg, 0);
+  mol2_cursor_t s = mol2_table_slice_by_index(&this->cur, 0);
   return convert_to_Uint32(&s);
 }
 
 RawTransactionType Transaction_get_raw(struct TransactionType *this) {
   struct RawTransactionType ret;
-  ret.seg = mol_table_slice_by_index(&this->seg, 0);
+  ret.cur = mol2_table_slice_by_index(&this->cur, 0);
   ret.tbl = GetRawTransactionVTable();
   return ret;
 }
-
-//
-// end of Sample API
-//

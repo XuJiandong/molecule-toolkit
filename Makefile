@@ -12,13 +12,13 @@ generated/blockchain-api.c: mol/blockchain.mol
 generated/types-api.c: mol/types.mol
 	moleculec --language c --schema-file mol/types.mol > generated/types-api.c
 
-fmt: src/builder-example.c src/blockchain-builder.c
+fmt: src/builder-example.c src/new-api-demo.c
 	clang-format -i -style=Google src/builder-example.c
-	clang-format -i -style=Google src/blockchain-builder.c
+	clang-format -i -style=Google src/new-api-demo.c
 	clang-format -i -style=Google include/molecule2_reader.h
 	clang-format -i -style=Google generated/blockchain-api2.h
 
-build/blockchain-builder: src/blockchain-builder.c
+build/blockchain-builder: src/new-api-demo.c
 	$(CC) $(CFLAGS) $(LOCAL_CFLAGS) $< -o $@
 
 clean:
