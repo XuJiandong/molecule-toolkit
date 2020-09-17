@@ -6,11 +6,11 @@ LOCAL_CFLAGS = -I generated -I include
 
 all: build/new-api-demo
 
-generated/blockchain-api.c: mol/blockchain.mol
-	moleculec --language c --schema-file mol/blockchain.mol > generated/blockchain-api.c
+generated/blockchain-api.h: mol/blockchain.mol
+	moleculec --language c --schema-file mol/blockchain.mol > generated/blockchain-api.h
 
-generated/types-api.c: mol/types.mol
-	moleculec --language c --schema-file mol/types.mol > generated/types-api.c
+generated/sample-api.h: mol/sample.mol
+	moleculec --language c --schema-file mol/sample.mol > generated/sample-api.h
 
 fmt: src/builder-example.c src/new-api-demo.c
 	clang-format -i -style=Google src/builder-example.c

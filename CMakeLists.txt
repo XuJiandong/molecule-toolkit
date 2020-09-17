@@ -16,3 +16,9 @@ add_executable(blockchain-builder
         include/molecule2_reader.h
         include/molecule_builder.h
         src/new-api-demo.c)
+
+add_executable(sample
+        include/molecule_reader.h
+        include/molecule2_reader.h
+        include/molecule_builder.h
+        src/sample-builder.h src/sample.c)
