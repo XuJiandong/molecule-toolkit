@@ -11,6 +11,7 @@ generated/blockchain-api.h: mol/blockchain.mol
 
 generated/sample-api.h: mol/sample.mol
 	moleculec --language c --schema-file mol/sample.mol > generated/sample-api.h
+	moleculec --language - --schema-file mol/sample.mol --format json > mol/sample.json
 
 fmt: src/builder-example.c src/new-api-demo.c
 	clang-format -i -style=Google src/builder-example.c
