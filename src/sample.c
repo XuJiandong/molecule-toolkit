@@ -3,8 +3,8 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "sample-builder.h"
 #include "sample-api2.h"
+#include "sample-builder.h"
 
 int main(int argc, const char* argv[]) {
   mol_seg_t sample_table = build_SampleTable();
@@ -26,6 +26,10 @@ int main(int argc, const char* argv[]) {
   int existing = 0;
   uint32_t len = byte_2d.tbl->len(&byte_2d);
   mol2_cursor_t cur = byte_2d.tbl->get(&byte_2d, 0, &existing);
+  mol2_read_at(&cur, buff, 2);
+  assert(buff[0] == 0xBE);
+  assert(buff[1] == 0xEF);
+  cur = byte_2d.tbl->get(&byte_2d, 1, &existing);
   mol2_read_at(&cur, buff, 2);
   assert(buff[0] == 0xBE);
   assert(buff[1] == 0xEF);

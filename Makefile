@@ -16,7 +16,10 @@ generated/sample-api.h: mol/sample.mol
 fmt: src/builder-example.c src/new-api-demo.c
 	clang-format -i -style=Google src/builder-example.c
 	clang-format -i -style=Google src/new-api-demo.c
+	clang-format -i -style=Google src/sample.c
+	clang-format -i -style=Google src/sample-builder.h
 	clang-format -i -style=Google include/molecule2_reader.h
+	clang-format -i -style=Google generated/sample-api2.h
 	clang-format -i -style=Google generated/blockchain-api2.h
 
 build/new-api-demo: src/new-api-demo.c

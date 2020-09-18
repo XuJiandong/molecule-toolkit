@@ -52,5 +52,4 @@ mol_seg_t build_SampleTable() {
   return res.seg;
 }
 
-
-#endif //MOLECULE_TOOLKIT_SRC_SAMPLE_BUILDER_H_
+#endif  // MOLECULE_TOOLKIT_SRC_SAMPLE_BUILDER_H_
