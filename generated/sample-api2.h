@@ -139,13 +139,13 @@ struct SampleDynVectorVTable *GetSampleDynVectorVTable(void) {
 // entries of virtual tables
 mol2_cursor_t SampleStruct_get_byte2_impl(SampleStructType *this) {
   mol2_cursor_t ret;
-  ret = mol2_slice_by_offset(&this->cur, 0, 4);
+  ret = mol2_slice_by_offset(&this->cur, 4, 2);
   return ret;
 }
 
 uint32_t SampleStruct_get_u32_impl(SampleStructType *this) {
   uint32_t ret;
-  mol2_cursor_t ret2 = mol2_slice_by_offset(&this->cur, 4, 2);
+  mol2_cursor_t ret2 = mol2_slice_by_offset(&this->cur, 0, 4);
   ret = convert_to_Uint32(&ret2);
   return ret;
 }

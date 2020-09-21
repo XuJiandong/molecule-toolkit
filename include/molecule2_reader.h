@@ -412,6 +412,10 @@ Int8 convert_to_Int8(mol2_cursor_t *cur) {
   return ret;
 }
 
+mol2_cursor_t convert_to_array(mol2_cursor_t *cur) {
+  return *cur;
+}
+
 mol2_cursor_t convert_to_rawbytes(mol2_cursor_t *cur) {
   return mol2_fixvec_slice_raw_bytes(cur);
 }
